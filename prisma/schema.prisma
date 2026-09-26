@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PaymentStatus {
+  pending
+  successful
+  failed
+  refunded
+}
+
+enum EbookFormat {
+  PDF
+}
+
+enum CourseLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+model User {
+  id            String   @id @default(cuid())
+  fullName      String
+  email         String   @unique
+  passwordHash  String
+  phone         String?
+  role          Role     @default(USER)
+  isSuspended   Boolean  @default(false)
+
+  // Denormalized flag, kept in sync by payment verification / webhook.
+  // Source of truth remains the Payment table.
+  hasPaidAccess Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  payments        Payment[]
+  enrollments     Enrollment[]
+  lessonProgress  LessonProgress[]
+  readingProgress ReadingProgress[]
+  auditLogs       AuditLog[]
+}
+
+// ─────────────────────────────────────────────────────────
+// PAYMENT — one-time ₦1,000 registration/access fee.
+// NOT recurring. No subscription billing anywhere in this schema.
+// ─────────────────────────────────────────────────────────
+model Payment {
+  id                  String        @id @default(cuid())
+  userId              String
+  user                User          @relation(fields: [userId], references: [id])
+
+  provider            String        @default("paystack")
+  transactionReference String       @unique
+  amount              Int // kobo — 1000 naira = 100000
+  currency            String        @default("NGN")
+  status              PaymentStatus @default(pending)
+  paymentType         String        @default("one_time_registration")
+  providerResponse     Json?
+
+  createdAt           DateTime      @default(now())
+  updatedAt            DateTime     @updatedAt
+  verifiedAt          DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Category {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  slug   String  @unique
+  ebooks Ebook[]
+  courses Course[]
+}
+
+model Ebook {
+  id              String      @id @default(cuid())
+  title           String
+  slug            String      @unique
+  author          String
+  description     String
+  categoryId      String?
+  category        Category?   @relation(fields: [categoryId], references: [id])
+  coverUrl        String?
+  fileStorageKey  String // path/key within private storage — never exposed directly
+  format          EbookFormat @default(PDF)
+  pageCount       Int
+  isPremium       Boolean     @default(true)
+  downloadEnabled Boolean     @default(false)
+  published       Boolean     @default(false)
+  sortOrder       Int         @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  readingProgress ReadingProgress[]
+}
+
+model ReadingProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  ebookId   String
+  ebook     Ebook    @relation(fields: [ebookId], references: [id])
+  lastPage  Int      @default(1)
+  percent   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, ebookId])
+}
+
+model Course {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  description String
+  thumbnailUrl String?
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  level       CourseLevel @default(beginner)
+  instructor  String?
+  // Same gating pattern as Ebook.isPremium — gated by the same one-time
+  // ₦1,000 hasPaidAccess flag, not a separate purchase.
+  isPremium   Boolean     @default(true)
+  published   Boolean     @default(false)
+  sortOrder   Int         @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  modules     CourseModule[]
+  enrollments Enrollment[]
+}
+
+model CourseModule {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  title     String
+  sortOrder Int      @default(0)
+  lessons   Lesson[]
+}
+
+model Lesson {
+  id             String   @id @default(cuid())
+  moduleId       String
+  module         CourseModule @relation(fields: [moduleId], references: [id])
+  title          String
+  description    String?
+
+  // A lesson video is EITHER an external embed link (YouTube/Vimeo/etc,
+  // videoUrl) OR a self-hosted file in private storage (videoStorageKey) —
+  // never both. Same private/signed pattern as Ebook.fileStorageKey.
+  videoUrl        String?
+  videoStorageKey String?
+
+  // Downloadable lesson attachment (worksheet, slides, etc). Same
+  // external-link-or-private-key split as video.
+  resourceUrl        String?
+  resourceStorageKey String?
+
+  durationSeconds Int?
+  sortOrder      Int      @default(0)
+  published      Boolean  @default(false)
+
+  progress LessonProgress[]
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id])
+  lessonId            String
+  lesson              Lesson   @relation(fields: [lessonId], references: [id])
+  completed           Boolean  @default(false)
+  lastWatchedPosition Int      @default(0)
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model SiteSetting {
+  key   String @id
+  value String
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id])
+  action    String // e.g. BOOK_PUBLISHED, PAYMENT_VERIFIED, ACCESS_REVOKED
+  entity    String
+  entityId  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+}
