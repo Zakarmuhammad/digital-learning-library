@@ -36,7 +36,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
 
   const bytes = await readLocalFile(ebook.fileStorageKey);
 
-  return new NextResponse(bytes, {
+  return new NextResponse(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="${ebook.slug}.pdf"`,
