@@ -34,8 +34,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const bytes = await readLocalFile(storageKey);
   const contentType = type === "video" ? "video/mp4" : "application/octet-stream";
-
-  return new NextResponse(bytes, {
+return new NextResponse(new Uint8Array(bytes), {
+  
     headers: {
       "Content-Type": contentType,
       "Content-Disposition": type === "resource" ? `attachment; filename="${lesson.title}"` : "inline",
