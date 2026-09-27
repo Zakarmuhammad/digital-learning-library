@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+Force dynamic rendering to fix build-time Prisma/DATABASE_URL error"import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "./providers";
 import { getAllSettings } from "@/lib/settings";
@@ -22,3 +22,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 // app/sitemap.ts
 
+Force dynamic rendering to fix build-time Prisma/DATABASE_URL error"
