@@ -20,3 +20,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+// app/sitemap.ts
+export const dynamic = "force-dynamic";
