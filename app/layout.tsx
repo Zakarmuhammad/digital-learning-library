@@ -1,7 +1,10 @@
-Force dynamic rendering to fix build-time Prisma/DATABASE_URL error"import type { Metadata } from "next";
+
+import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "./providers";
 import { getAllSettings } from "@/lib/settings";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getAllSettings();
@@ -20,7 +23,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-// app/sitemap.ts
-
-
-export const dynamic = "force-dynamic";
