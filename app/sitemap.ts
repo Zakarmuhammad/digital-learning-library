@@ -18,4 +18,4 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 }// app/layout.tsx
 
-Force dynamic rendering to fix build-time Prisma/DATABASE_URL error"
+export const dynamic = "force-dynamic";
