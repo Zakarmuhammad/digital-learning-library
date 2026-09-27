@@ -17,4 +17,4 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...courses.map((c) => ({ url: `${base}/courses/${c.slug}`, lastModified: c.updatedAt })),
   ];
 }// app/layout.tsx
-export const dynamic = "force-dynamic";
+
