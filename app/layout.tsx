@@ -22,4 +22,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 // app/sitemap.ts
 
-Force dynamic rendering to fix build-time Prisma/DATABASE_URL error"
+
+export const dynamic = "force-dynamic";
